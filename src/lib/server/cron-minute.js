@@ -1,7 +1,7 @@
 // @ts-nocheck
 import axios from "axios";
 import { Ping, ExtractIPv6HostAndPort, TCP } from "./ping.js";
-import { UP, DOWN, DEGRADED } from "./constants.js";
+import { UP, DOWN, DEGRADED, REALTIME, TIMEOUT, ERROR, MANUAL } from "./constants.js";
 import Service from "./services/service.js";
 import { GetMinuteStartNowTimestampUTC, ReplaceAllOccurrences, GetRequiredSecrets, Wait } from "./tool.js";
 
@@ -14,11 +14,6 @@ import notification from "./notification/notif.js";
 import DNSResolver from "./dns.js";
 
 dotenv.config();
-
-const REALTIME = "realtime";
-const TIMEOUT = "timeout";
-const ERROR = "error";
-const MANUAL = "manual";
 
 const alertingQueue = new Queue({
   concurrency: 10, // Number of tasks that can run concurrently
@@ -46,12 +41,6 @@ async function manualIncident(monitor) {
   for (let i = 0; i < impactArr.length; i++) {
     const element = impactArr[i];
 
-    let autoIncidents = await db.getActiveAlertIncident(monitor.tag, element.monitor_impact, element.id);
-
-    if (!!autoIncidents) {
-      continue;
-    }
-
     if (element.monitor_impact === "DOWN") {
       impact = "DOWN";
       break;
@@ -72,6 +61,7 @@ async function manualIncident(monitor) {
       type: MANUAL,
     },
   };
+
   return manualData;
 }
 
@@ -114,6 +104,7 @@ const Minuter = async (monitor) => {
   }
 
   manualData = await manualIncident(monitor);
+
   //merge noData, apiData, webhookData, dayData
   let mergedData = {};
 

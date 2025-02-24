@@ -107,6 +107,12 @@ const siteDataKeys = [
     data_type: "string",
   },
   {
+    key: "tzToggle",
+    //boolean
+    isValid: (value) => typeof value === "string",
+    data_type: "string",
+  },
+  {
     key: "barStyle",
     //PARTIAL or FULL
     isValid: (value) => typeof value === "string" && ["PARTIAL", "FULL"].includes(value),
@@ -152,6 +158,11 @@ const siteDataKeys = [
   {
     key: "homeIncidentStartTimeWithin",
     isValid: (value) => parseInt(value) >= 1,
+    data_type: "string",
+  },
+  {
+    key: "incidentGroupView",
+    isValid: (value) => typeof value === "string" && value.trim().length > 0,
     data_type: "string",
   },
 ];
@@ -434,6 +445,18 @@ export const GetLastStatusBefore = async (monitor_tag, timestamp) => {
   return NO_DATA;
 };
 
+export const AggregateData = (rawData) => {
+  //data like [{ timestamp: 1732435920, status: 'NO_DATA' }]
+  let rawDataWithStatus = rawData.filter((data) => data.status !== NO_DATA);
+  const total = rawDataWithStatus.length;
+  const UPs = rawDataWithStatus.filter((data) => data.status === UP).length;
+  const DOWNs = rawDataWithStatus.filter((data) => data.status === DOWN).length;
+  const DEGRADEDs = rawDataWithStatus.filter((data) => data.status === DEGRADED).length;
+  const NO_DATAs = total - (UPs + DOWNs + DEGRADEDs);
+
+  return { total, UPs, DOWNs, DEGRADEDs, NO_DATAs };
+};
+
 export const GetDataGroupByDayAlternative = async (monitor_tag, start, end, timezoneOffsetMinutes = 0) => {
   const offsetMinutes = Number(timezoneOffsetMinutes);
   if (isNaN(offsetMinutes)) {
@@ -444,7 +467,7 @@ export const GetDataGroupByDayAlternative = async (monitor_tag, start, end, time
 
   let rawData = await db.getDataGroupByDayAlternative(monitor_tag, start, end);
   let anchorStatus = await GetLastStatusBefore(monitor_tag, start);
-  rawData = InterpolateData(rawData, start, anchorStatus, rawData.length == 0 ? end - 60 : null);
+  rawData = InterpolateData(rawData, start, anchorStatus, end - 60);
 
   const groupedData = rawData.reduce((acc, row) => {
     // Calculate day group considering timezone offset
@@ -491,6 +514,7 @@ export const CreateIncident = async (data) => {
     end_date_time: !!data.end_date_time ? data.end_date_time : null,
     state: !!data.state ? data.state : "INVESTIGATING",
     incident_type: !!data.incident_type ? data.incident_type : "INCIDENT",
+    incident_source: !!data.incident_source ? data.incident_source : "DASHBOARD",
   };
 
   //incident_type == INCIDENT delete endDateTime
@@ -505,7 +529,7 @@ export const CreateIncident = async (data) => {
 
   let newIncident = await db.createIncident(incident);
   return {
-    incident_id: newIncident[0],
+    incident_id: newIncident.id,
   };
 };
 
@@ -681,6 +705,7 @@ export const GetIncidentsDashboard = async (data) => {
 
   for (let i = 0; i < incidents.length; i++) {
     incidents[i].monitors = await GetIncidentMonitors(incidents[i].id);
+    incidents[i].isAutoCreated = await db.alertExistsIncident(incidents[i].id);
   }
 
   return {
