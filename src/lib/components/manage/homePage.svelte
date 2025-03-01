@@ -26,8 +26,11 @@
     subtitle: ""
   };
   let footerHTML = "";
+  let tzToggle = "NO";
   let homeIncidentCount = 10;
   let homeIncidentStartTimeWithin = 30;
+  let incidentGroupView = "EXPAND_FIRST";
+
   let nav = [];
   let categories = [];
   let i18n = {
@@ -61,8 +64,14 @@
   if (data.siteData.homeIncidentStartTimeWithin) {
     homeIncidentStartTimeWithin = data.siteData.homeIncidentStartTimeWithin;
   }
+  if (data.siteData.incidentGroupView) {
+    incidentGroupView = data.siteData.incidentGroupView;
+  }
   if (data.siteData.footerHTML) {
     footerHTML = data.siteData.footerHTML;
+  }
+  if (data.siteData.tzToggle) {
+    tzToggle = data.siteData.tzToggle;
   }
   if (data.siteData.i18n) {
     i18n = data.siteData.i18n;
@@ -138,7 +147,8 @@
     formStateIncident = "loading";
     let resp = await storeSiteData({
       homeIncidentCount: homeIncidentCount,
-      homeIncidentStartTimeWithin: homeIncidentStartTimeWithin
+      homeIncidentStartTimeWithin: homeIncidentStartTimeWithin,
+      incidentGroupView: incidentGroupView
     });
     //print data
     let data = await resp.json();
@@ -213,7 +223,8 @@
   async function formSubmiti18n() {
     formStatei18n = "loading";
     let resp = await storeSiteData({
-      i18n: JSON.stringify(i18n)
+      i18n: JSON.stringify(i18n),
+      tzToggle: tzToggle
     });
     //print data
     let data = await resp.json();
@@ -228,9 +239,7 @@
 <Card.Root class="mt-4">
   <Card.Header class="border-b">
     <Card.Title>Hero Section</Card.Title>
-    <Card.Description>
-      Configure the hero section of your site. This is the first section that appears on your site.
-    </Card.Description>
+    <Card.Description>Configure the hero section of your site.</Card.Description>
   </Card.Header>
   <Card.Content>
     <form class="mx-auto mt-4 space-y-4" on:submit|preventDefault={formSubmitHero}>
@@ -298,7 +307,7 @@
   </Card.Header>
   <Card.Content>
     <form class="mx-auto mt-4 space-y-4" on:submit|preventDefault={formSubmitIncident}>
-      <div class="flex max-w-md flex-row justify-start gap-2">
+      <div class="flex flex-row justify-start gap-2">
         <div class="">
           <Label for="hero_title">Maximum Number to Show</Label>
           <Input bind:value={homeIncidentCount} class="mt-2" type="text" id="homeIncidentCount" placeholder="10" />
@@ -312,6 +321,33 @@
             id="homeIncidentStartTimeWithin"
             placeholder="2 days"
           />
+        </div>
+        <div>
+          <Label for="incidentGroupView" class="text-sm font-medium">Incident Group View</Label>
+          <Select.Root
+            portal={null}
+            onSelectedChange={(e) => {
+              incidentGroupView = e.value;
+            }}
+            selected={{
+              value: incidentGroupView,
+              label: incidentGroupView.replace("_", " ")
+            }}
+          >
+            <Select.Trigger class="	mt-2 w-[200px]" id="incidentGroupView">
+              <Select.Value bind:value={incidentGroupView} placeholder="Favicon Type" />
+            </Select.Trigger>
+            <Select.Content>
+              <Select.Group>
+                <Select.Label>Favicon Type</Select.Label>
+                <Select.Item value="EXPAND_FIRST" label="EXPAND FIRST" class="text-sm font-medium"
+                  >EXPAND FIRST</Select.Item
+                >
+                <Select.Item value="COLLAPSED" label="COLLAPSED" class="text-sm font-medium">COLLAPSED</Select.Item>
+                <Select.Item value="EXPANDED" label="EXPANDED" class="text-sm font-medium">EXPANDED</Select.Item>
+              </Select.Group>
+            </Select.Content>
+          </Select.Root>
         </div>
         <div class="pt-8">
           <Button type="submit" disabled={formStateIncident === "loading"}>
@@ -333,9 +369,7 @@
 <Card.Root class="mt-4">
   <Card.Header class="border-b">
     <Card.Title>Navigation</Card.Title>
-    <Card.Description>
-      Configure the navigation of your site. This is the first section that appears on your site.
-    </Card.Description>
+    <Card.Description>Configure the navigation of your site.</Card.Description>
   </Card.Header>
   <Card.Content>
     <form class="mx-auto mt-4 space-y-4" on:submit|preventDefault={formSubmitNav}>
@@ -452,9 +486,7 @@
 <Card.Root class="mt-4">
   <Card.Header class="border-b">
     <Card.Title>Internationalization</Card.Title>
-    <Card.Description>
-      Configure the languages of your site. This is the first section that appears on your site.
-    </Card.Description>
+    <Card.Description>Configure the languages of your site.</Card.Description>
   </Card.Header>
   <Card.Content>
     <form class="mx-auto mt-4 space-y-4" on:submit|preventDefault={formSubmiti18n}>
@@ -497,6 +529,24 @@
           </Select.Group>
         </Select.Content>
       </Select.Root>
+      <p class="pt-4 text-lg font-medium">Timezone Switching</p>
+      <p class="text-sm font-medium text-muted-foreground">
+        Kener will automatically detect the user's timezone and show the status page in their timezone. You can let
+        users switch between different timezones if you want.
+      </p>
+
+      <p class="text-sm font-medium">
+        <label>
+          <input
+            on:change={(e) => {
+              tzToggle = e.target.checked === true ? "YES" : "NO";
+            }}
+            type="checkbox"
+            checked={tzToggle === "YES"}
+          />
+          Allow users to switch timezones
+        </label>
+      </p>
       <div class="flex w-full justify-end">
         <Button type="submit" disabled={formStatei18n === "loading"}>
           Save
@@ -512,9 +562,7 @@
 <Card.Root class="mt-4">
   <Card.Header class="border-b">
     <Card.Title>Site Categories</Card.Title>
-    <Card.Description>
-      Configure the categories of your site. This is the first section that appears on your site.
-    </Card.Description>
+    <Card.Description>Configure the categories of your site.</Card.Description>
   </Card.Header>
   <Card.Content>
     <form class="mx-auto mt-4 space-y-4" on:submit|preventDefault={formSubmitCategories}>
@@ -574,9 +622,7 @@
 <Card.Root class="mt-4">
   <Card.Header class="border-b">
     <Card.Title>Site Footer</Card.Title>
-    <Card.Description>
-      Configure the footer of your site. This is the first section that appears on your site.
-    </Card.Description>
+    <Card.Description>Configure the footer of your site.</Card.Description>
   </Card.Header>
   <Card.Content>
     <form class="mx-auto mt-4 space-y-4" on:submit|preventDefault={formSubmitFooter}>
